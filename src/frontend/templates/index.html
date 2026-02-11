@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Arcade Game Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', monospace; background: #1e1e1e; color: #e0e0e0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: #4caf50; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
+
+        .container { width: 100%; max-width: 800px; background: #2d2d2d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+
+        /* Input Group */
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #aaa; }
+
+        input[type="text"], select {
+            width: 100%; padding: 12px; font-size: 16px;
+            background: #3d3d3d; border: 1px solid #555; color: #fff; border-radius: 5px;
+            box-sizing: border-box; /* Fix padding issue */
+        }
+
+        button {
+            width: 100%; padding: 12px; font-size: 18px; cursor: pointer;
+            background: #4caf50; border: none; color: white; font-weight: bold; border-radius: 5px;
+            transition: background 0.3s;
+        }
+        button:hover { background: #45a049; }
+        button:disabled { background: #555; cursor: not-allowed; }
+
+        /* Logs */
+        #logs {
+            border: 1px solid #444; padding: 15px; height: 400px;
+            overflow-y: scroll; background: #000; font-size: 14px;
+            border-radius: 5px; margin-top: 20px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .log-entry { margin: 5px 0; border-bottom: 1px solid #333; padding-bottom: 2px; }
+        .log-timestamp { color: #888; margin-right: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Arcade 2.x Game Generator</h1>
+
+        <div class="input-group">
+            <label for="providerSelect">Select AI Provider:</label>
+            <select id="providerSelect">
+                <option value="openai" selected>OpenAI (GPT-4o)</option>
+                <option value="google">Google (Gemini 2.5 Flash)</option>
+                <option value="groq">Groq (Llama 3 70B)</option>
+                <option value="mistral">Mistral (Large)</option>
+                <option value="deepseek">DeepSeek (V3)</option>
+                <option value="ollama">Ollama (Local Llama 3)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="ideaInput">Game Idea:</label>
+            <input type="text" id="ideaInput" placeholder="e.g., A cyberpunk snake game with neon effects...">
+        </div>
+
+        <button id="genBtn" onclick="startGeneration()">🚀 Generate Game</button>
+
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        // Use standard polling/websocket transport to avoid compatibility issues
+        var socket = io({transports: ['polling', 'websocket']});
+        var logsDiv = document.getElementById('logs');
+        var btn = document.getElementById('genBtn');
+
+        socket.on('connect', function() {
+            console.log('Connected to Server');
+            addLog('System', 'Connected to server ready.');
+        });
+
+        socket.on('agent_log', function(msg) {
+            addLog('Agent', msg.data);
+        });
+
+        function addLog(source, message) {
+            var div = document.createElement('div');
+            div.className = 'log-entry';
+            var time = new Date().toLocaleTimeString();
+            div.innerHTML = `<span class="log-timestamp">[${time}]</span> <span style="color: #4caf50;">[${source}]</span> ${message}`;
+            logsDiv.appendChild(div);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function startGeneration() {
+            var idea = document.getElementById('ideaInput').value;
+            var provider = document.getElementById('providerSelect').value; // [NEW] Get selected provider
+
+            if(!idea) { alert("Please enter a game idea!"); return; }
+
+            // Reset UI
+            logsDiv.innerHTML = '';
+            btn.disabled = true;
+            btn.innerText = "Generating...";
+
+            addLog('System', `Requesting generation with provider: ${provider}...`);
+
+            fetch('/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    idea: idea,
+                    provider: provider  // [NEW] Send provider to backend
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                addLog('System', `Finished! Path: ${data.path}`);
+                btn.disabled = false;
+                btn.innerText = "🚀 Generate Game";
+            })
+            .catch(err => {
+                addLog('Error', 'Request failed: ' + err);
+                btn.disabled = false;
+                btn.innerText = "🚀 Generate Game";
+            });
+        }
+    </script>
+</body>
+</html>
