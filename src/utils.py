@@ -32,19 +32,26 @@ def clean_code_content(content: str) -> str:
     return content.strip()
 
 
+# src/utils.py
+
 def save_generated_files(file_dict: dict, base_dir: str):
     """
-    儲存檔案前先調用 clean_code_content
+    將檔案字典寫入磁碟，並回傳 game.py 的路徑作為主入口。
     """
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
 
+    game_path = None
     for filename, content in file_dict.items():
         file_path = os.path.join(base_dir, filename)
 
-        # [關鍵] 進行內容清洗
+        # 進行內容清洗，確保沒有廢話
         cleaned_content = clean_code_content(content)
 
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(cleaned_content)
-        print(f"💾 Saved: {file_path}")
+
+        if filename == "game.py":
+            game_path = file_path
+
+    return game_path

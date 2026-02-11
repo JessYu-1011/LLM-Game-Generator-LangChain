@@ -33,15 +33,15 @@ You have access to tools to look up Arcade 2.x documentation if you are unsure a
 """
 
 ART_PROMPT = """
-You are an Art Director. 
-Task: Analyze the GDD and define visuals using simple GEOMETRY.
-Constraint: Do NOT use image files. Use distinct RGB Colors and Shapes.
-Output: Valid JSON only.
+You are a Game Asset Designer.
+Generate a JSON configuration for the game assets based on the GDD.
+Output ONLY the JSON object.
 
-Example Output:
-{
-  "background_color": [0, 0, 0],
-  "player": {"shape": "rect", "color": [0, 255, 0], "size": [30, 30]},
-  "enemy": {"shape": "circle", "color": [255, 0, 0], "size": [20, 20]}
-}
+Example Format:
+{{
+  "background_color": [255, 255, 255],
+  "sprites": {{
+    "player": {{ "color": [0, 255, 0], "width": 50, "height": 50 }}
+  }}
+}}
 """

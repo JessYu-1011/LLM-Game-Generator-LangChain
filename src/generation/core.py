@@ -1,5 +1,6 @@
 import os
 from src.generation.chains import ArcadeAgentChain
+from src.utils import clean_code_content
 
 
 def run_design_phase(user_input, log_callback=print, provider="openai", model="gpt-4o"):
@@ -16,7 +17,7 @@ def run_design_phase(user_input, log_callback=print, provider="openai", model="g
     final_gdd = ""
 
     log_callback("[Design] CPO Drafting GDD...")
-    # 簡單跑 2 次 Review 循環，確保 GDD 品質
+    # Review for 2 times
     for i in range(2):
         final_gdd = agents.get_cpo_chain().invoke({
             "idea": user_input,
@@ -30,55 +31,33 @@ def run_design_phase(user_input, log_callback=print, provider="openai", model="g
     return final_gdd
 
 
-def run_production_pipeline(gdd_context, asset_json, log_callback=print, provider="openai", model="gpt-4o"):
+def run_production_pipeline(gdd_context, asset_json, log_callback=print, provider="openai", model=None):
     """
-    執行生產階段：Architect -> Programmer (Multi-file)
+    執行生產階段，強制產出單一 game.py 檔案。
     """
     agents = ArcadeAgentChain(provider, model)
 
-    log_callback("[Architect] Designing system architecture & API contracts...")
-    architect = agents.get_architect_chain()
+    # 1. 獲取架構計畫
+    log_callback("[Architect] 規劃系統架構...")
+    plan = agents.get_architect_chain().invoke({
+        "gdd": gdd_context,
+        "assets": asset_json,
+        "format_instructions": agents.json_parser.get_format_instructions()
+    })
 
-    try:
-        plan_output = architect.invoke({
-            "gdd": gdd_context,
-            "assets": asset_json,
-            "format_instructions": agents.json_parser.get_format_instructions()
-        })
-    except Exception as e:
-        log_callback(f"[Error] Architect failed to generate plan: {e}")
-        return {}
+    # 2. 強制單一檔案生成 (game.py)
+    log_callback("[Programmer] 正在實作 game.py (整合所有邏輯)...")
+    response = agents.get_programmer_chain().invoke({
+        "architecture_plan": plan.get('architecture', ''),
+        "constraints": "\n".join(plan.get('constraints', []))
+    })
 
-    constraints = plan_output.get('constraints', [])
-    files_to_generate = plan_output.get('files', [])
+    # 獲取內容並進行代碼清洗 (移除解釋性文字)
+    content = response.content if hasattr(response, 'content') else str(response)
+    cleaned_code = clean_code_content(content)
 
-    log_callback(f"[Architect] Plan generated. Total files: {len(files_to_generate)}")
-
-    final_project_code = {}
-    programmer = agents.get_programmer_chain()
-
-    for file_info in files_to_generate:
-        filename = file_info['filename']
-        purpose = file_info['purpose']
-        skeleton = file_info['skeleton_code']
-
-        log_callback(f"[Programmer] Implementing {filename}...")
-
-        # Programmer 實作骨架
-        response = programmer.invoke({
-            "filename": filename,
-            "purpose": purpose,
-            "constraints": "\n".join(constraints),
-            "skeleton_code": skeleton
-        })
-
-        # 處理 LangChain 回傳格式 (AIMessage.content 或 str)
-        content = response.content if hasattr(response, 'content') else str(response)
-        from src.utils import clean_code_content
-        final_project_code[filename] = clean_code_content(content)
-
-    return final_project_code
-
+    # 只回傳一個檔案
+    return {"game.py": cleaned_code}
 
 def run_test_and_fix_phase(project_files, work_dir, log_callback=print, provider="openai", model="gpt-4o"):
     """
@@ -89,7 +68,7 @@ def run_test_and_fix_phase(project_files, work_dir, log_callback=print, provider
     """
     agents = ArcadeAgentChain(provider, model)
 
-    # 0. 確保檔案已寫入磁碟 (測試需要讀取 main.py)
+    # 0. Ensure the file has been written to disk for the Fuzzer to run
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
 
@@ -108,7 +87,7 @@ def run_test_and_fix_phase(project_files, work_dir, log_callback=print, provider
     for attempt in range(max_retries):
         log_callback(f"[Test] 🧪 Running Fuzzer (Attempt {attempt + 1}/{max_retries})...")
 
-        # 動態匯入 runner 以避免循環依賴
+        # Dynamically import the runner to avoid circular imports and only require it when testing
         try:
             from src.testing.runner import run_fuzz_test
         except ImportError:
@@ -124,7 +103,7 @@ def run_test_and_fix_phase(project_files, work_dir, log_callback=print, provider
         log_callback(f"[Test] ❌ Runtime Crash Detected:\n{error_msg}")
         log_callback("[Fixer] 🔧 Engaging Syntax Fixer...")
 
-        # 讀取當前壞掉的代碼
+        # Read the broken code for the fixer
         with open(main_file, "r", encoding="utf-8") as f:
             broken_code = f.read()
 
