@@ -34,6 +34,8 @@ class Config:
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key")
 
+    OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
+
     # --- LLM API Keys ---
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
