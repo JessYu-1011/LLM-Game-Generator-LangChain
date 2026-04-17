@@ -11,7 +11,11 @@ def run_full_generator_pipeline(user_input, log_callback=print, provider="openai
     """
     # Agents
     agents = ArcadeAgentChain(provider, model=None)
-    prompt_compress_agents = LocalPromptCompressor(model_name="llama3.1:latest")
+    prompt_compress_agents = LocalPromptCompressor(
+        provider=config.PROMPT_COMPRESS_PROVIDER,
+        model_name=config.PROMPT_COMPRESS_MODEL_NAME,
+        temperature=0.1
+    )
 
     # Output dir
     output_path = os.path.join(config.OUTPUT_DIR, "generated_game")
