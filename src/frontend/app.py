@@ -6,7 +6,7 @@ from flask_socketio import SocketIO
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from src.config import config
-from src.generation.core import run_full_generator_pipeline
+from src.generation.core.core import run_full_generator_pipeline
 from src.utils import save_generated_files
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
