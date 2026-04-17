@@ -6,11 +6,11 @@ from src.generation.model_factory import get_langchain_model
 
 
 class LocalPromptCompressor:
-    def __init__(self, model_name="llama3.1:latest"):
+    def __init__(self, provider="ollama", model_name="llama3.1:latest", temperature: float = 0.1):
         """
         Use local models for compressing the prompts
         """
-        self.local_llm = get_langchain_model(provider="ollama", model_name=model_name, temperature=0.1)
+        self.local_llm = get_langchain_model(provider=provider, model_name=model_name, temperature=temperature)
 
     def compress_errors(self, error_history: list[str] | str) -> str:
         """
@@ -41,4 +41,4 @@ class LocalPromptCompressor:
                         "Discard all story, visual, and audio descriptions. Be extremely concise."),
             ("user", "GDD:\n{gdd}")
         ])
-        return prompt | self.llm | StrOutputParser()
+        return prompt | self.local_llm | StrOutputParser()

@@ -315,7 +315,19 @@ def create_game_generator_graph(agents: ArcadeAgentChain, prompt_compress_agents
         log_callback("[Review] Running strict API standard review...")
         review_result = agents.get_logic_reviewer_chain().invoke({"code": current_code})
 
-        if "PASS" not in review_result:
+        if isinstance(review_result, dict):
+            status_str = str(review_result.get("status", "")).upper()
+        else:
+            try:
+                parsed_json = json.loads(review_result)
+                if isinstance(parsed_json, dict):
+                    status_str = str(parsed_json.get("status", "")).upper()
+                else:
+                    status_str = str(review_result).upper()
+            except json.JSONDecodeError:
+                status_str = str(review_result).upper()
+
+        if "PASS" not in status_str:
             error_msg = f"[LogicError] {review_result}"
             log_callback(f"[Review] Logic/API Rule Violation: {review_result}")
             # Logic Errors are routed to the Logic Fixer
@@ -437,7 +449,11 @@ def run_full_generator_pipeline(user_input, log_callback=print, provider="openai
     # For other agents
     agents = ArcadeAgentChain(provider, model=None)
     # Specifically for prompt compress agents
-    prompt_compress_agents = LocalPromptCompressor(model_name="llama3.1:latest")
+    prompt_compress_agents = LocalPromptCompressor(
+        provider=config.PROMPT_COMPRESS_PROVIDER,
+        model_name=config.PROMPT_COMPRESS_MODEL_NAME,
+        temperature=0.1
+    )
     output_path = os.path.join(config.OUTPUT_DIR, "generated_game")
     if not os.path.exists(output_path):
         os.makedirs(output_path)

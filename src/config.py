@@ -67,6 +67,10 @@ class Config:
     LLM_EMBEDDING_MODEL_TYPE = os.getenv("LLM_EMBEDDING_MODEL_TYPE")
     LLM_EMBEDDING_CLIENT_TOKEN = os.getenv("LLM_EMBEDDING_CLIENT_TOKEN")
 
+    # --- Prompt Compression ---
+    PROMPT_COMPRESS_PROVIDER = os.getenv("PROMPT_COMPRESS_PROVIDER")
+    PROMPT_COMPRESS_MODEL_NAME = os.getenv("PROMPT_COMPRESS_MODEL_NAME")
+
     # --- ChromaDB ---
     CHROMA_TENANT = os.getenv("CHROMA_TENANT", "default_tenant")
     CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "default_database")
