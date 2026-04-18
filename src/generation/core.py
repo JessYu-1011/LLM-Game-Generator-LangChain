@@ -228,7 +228,6 @@ def create_game_generator_graph(agents: ArcadeAgentChain, log_callback, work_dir
                 pass
         pattern = r"get_texture\(\s*'([^']+)'.*?width\s*=\s*([^,\s)]+).*?height\s*=\s*([^\s,)]+)\s*\)[\s\S]*?#\s*DESCRIPTION:\s*([^\n]+)"
         matches = re.findall(pattern, cleaned_code, re.DOTALL)
-        print(matches)
         for match in matches:
             if len(match) != 4: continue
             name, width, height, description = match
@@ -236,14 +235,7 @@ def create_game_generator_graph(agents: ArcadeAgentChain, log_callback, work_dir
                 width = eval(width, {"__builtins__": None}, safe_env)
             except:
                 width = int(width)
-
-            try:
-                height = eval(height, {"__builtins__": None}, safe_env)
-            except:
-                height = int(height)
-            # ingore too small picture
-            if int(width) < 32 or int(height) < 32 : 
-                continue
+                
             size = [int(width), int(height)]
             picture_generate(name, description, size)    
         

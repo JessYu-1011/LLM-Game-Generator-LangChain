@@ -1,6 +1,7 @@
 import arcade
 import os
 from pathlib import Path
+import json
 
 
 class AssetManager:
@@ -17,9 +18,11 @@ class AssetManager:
         Normalize LLM's function call. Safely load a texture. Generates a solid color square if not found.
         """
         # normalize path 
-        filename = os.path.splitext(os.path.basename(path))[0].lower() + ".png" # 統一小寫 + 強制格式為.png
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        filename = os.path.splitext(os.path.basename(path))[0].lower() + ".png" # 統一小寫 + 強制格式為.png
         image_path = os.path.join(project_root, "output_games", "generated_game", "picture", filename)
+        filename = os.path.splitext(os.path.basename(path))[0].lower() + ".json"
+        hitbox_path = os.path.join(project_root, "output_games", "generated_game", "hitbox", filename)
 
         # search cache
         if image_path in cls._textures:
@@ -30,6 +33,10 @@ class AssetManager:
                 raise FileNotFoundError(f"File not found: {image_path}")
 
             texture = arcade.load_texture(image_path)
+            with open(hitbox_path, "r") as f:
+                    points = json.load(f)
+            texture._hit_box_points = points # 載入碰撞箱
+
             cls._textures[image_path] = texture
             return texture
 
@@ -38,7 +45,7 @@ class AssetManager:
             fallback_texture = arcade.make_soft_square_texture(width, fallback_color, outer_alpha=255)
             cls._textures[image_path] = fallback_texture
             return fallback_texture
-        
+
     @classmethod
     def get_sound(cls, path: str):
         """

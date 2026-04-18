@@ -11,12 +11,20 @@ BASE_URL = "http://127.0.0.1:8188"
 
 def picture_generate(name, description, size):
     print("Name : ", name, " | ", "Description : ", description, " | ", "Size : ", size)
+
+    if size[0] < 32 and size[1] < 32: # 圖片極小 (w < 32 AND h < 32)
+        print(f"{name} is too small ({size}), using fall back.")
+        return 
     
     # ---------- 等比例放大到 >= 512 ----------
     original_size = size.copy() # 記住原尺寸
     w, h = size
     scale = max(512 / w, 512 / h) if (w < 512 or h < 512) else 1
     size = [int(w * scale), int(h * scale)]
+
+    if size[0] > 2048 or size[1] > 2048:  # 圖片特殊 (長寬比超過4倍)
+        print(f"{name} is too large ({size}), using fall back.")
+        return
 
     # ---------- 送到 ComfyUI Queue ----------
     with open("./src/generation/comfyUI_prompt.json", "r", encoding="utf-8") as f:
