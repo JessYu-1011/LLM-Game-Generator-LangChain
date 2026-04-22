@@ -34,6 +34,8 @@ class Config:
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key")
 
+    OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
+
     # --- LLM API Keys ---
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -64,6 +66,10 @@ class Config:
     LLM_EMBEDDING_SERVER_PORT = os.getenv("LLM_EMBEDDING_SERVER_PORT", "")
     LLM_EMBEDDING_MODEL_TYPE = os.getenv("LLM_EMBEDDING_MODEL_TYPE")
     LLM_EMBEDDING_CLIENT_TOKEN = os.getenv("LLM_EMBEDDING_CLIENT_TOKEN")
+
+    # --- Prompt Compression ---
+    PROMPT_COMPRESS_PROVIDER = os.getenv("PROMPT_COMPRESS_PROVIDER")
+    PROMPT_COMPRESS_MODEL_NAME = os.getenv("PROMPT_COMPRESS_MODEL_NAME")
 
     # --- ChromaDB ---
     CHROMA_TENANT = os.getenv("CHROMA_TENANT", "default_tenant")

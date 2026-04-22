@@ -32,6 +32,7 @@ def get_langchain_model(provider: str = "openai", model_name: str = None, temper
         return ChatOpenAI(
             model=model_name,
             api_key=config.OPENAI_API_KEY,
+            base_url=config.OPENAI_BASE_URL,
             temperature=temperature,
         )
 

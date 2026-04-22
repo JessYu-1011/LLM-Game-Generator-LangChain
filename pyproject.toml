@@ -9,6 +9,7 @@ dependencies = [
     "eventlet>=0.40.4",
     "flask>=3.1.2",
     "flask-socketio>=5.6.0",
+    "langchain-community>=0.4.1",
     "langchain-core>=1.2.11",
     "langchain-google-genai>=4.2.0",
     "langchain-ollama>=1.0.1",
