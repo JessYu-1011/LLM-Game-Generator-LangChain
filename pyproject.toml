@@ -17,4 +17,5 @@ dependencies = [
     "langgraph>=1.0.8",
     "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
+    "rembg==2.0.41",
 ]

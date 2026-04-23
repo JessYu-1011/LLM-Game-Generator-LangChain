@@ -26,7 +26,8 @@
 * `ANTHROPIC_API_KEY`: Claude 密鑰（如果使用 Claude 系列）。
 * `OLLAMA_BASE_URL`: 若使用本地端模型，請設定 Ollama 伺服器位址 (預設 `http://localhost:11434`)。
 * `DEFAULT_MODEL`: 設定負責推理的主力模型 (例如 `gpt-4o`, `claude-3-5-sonnet`, `llama3`)。
-
+* `PROMPT_COMPRESS_PROVIDER`: 設定 prompt compression 的 provider (`ollama`, `openai`, `google`)
+* `PROMPT_COMPRESS_MODEL_NAME`: 設定 prompt compression 的 model
 ### 2. RAG 與 ChromaDB 設定 (`RagConfig`)
 用於控制檢索增強生成 (RAG) 模組的連線模式，避免一直嘗試連線外部伺服器：
 * `CHROMA_CLIENT_TYPE`: 
