@@ -112,7 +112,7 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
             if "asset_manager" in t_file:
                 guaranteed_imports.append("from asset_manager import AssetManager")
                 template_instructions += (
-                    "**AssetManager (MANDATORY)**: NEVER use `arcade.load_texture`. ALWAYS load sprites like this:\n"
+                    "**AssetManager (MANDATORY)**: NEVER use `arcade.load_texture`. NEVER use `arcade.create_soft_texture`. NEVER use `arcade.texture`. ALWAYS load sprites like this:\n"
                     "`self.texture = AssetManager.get_texture('player', fallback_color=arcade.color.RED, width=32, height=32)`\n\n"
                     "**ASSET DESCRIPTION**: Immediately after each get_texture call, write a short, concrete text description of the asset for image generation.\n"
                     "- Must be one line only.\n"

@@ -56,10 +56,19 @@ Task: Write the complete 'game.py' based on the Design and Assets.
    - **REQUIRED**: Use legacy drawing functions:
      - `arcade.draw_rectangle_filled(center_x, center_y, width, height, color)`
      - `arcade.draw_text(text, start_x, start_y, color, font_size)`
-   - **Colors**: Use `arcade.color.COLOR_NAME` or `(r, g, b)` tuples.
-3. **Asset Management (Procedural)**:
-   - Do NOT load external files. Use `PIL` to create textures procedurally.
-   - **Texture Constructor**: `arcade.Texture(name_string, image_object)`. 
+   - **Colors**: Use `arcade.color.COLOR_NAME` only.
+3. **texture management**
+   - there's an imported file called asset_manager.py, which helps you to create and manage the texture.
+   - Texture Constructor: AssetManager.get_texture(cls, path: str, fallback_color=arcade.color.MAGENTA, width=32, height=32)
+   **ASSET DESCRIPTION**: Immediately after each get_texture call, write a short, concrete text description of the asset for image generation.\n"
+   - Must be one line only.
+   - Must clearly describe what the sprite should look like.
+   - Example: `# DESCRIPTION: a brave knight in shining armor wielding a sword
+   - Always include this DESCRIPTION comment for every asset.
+   for example:     ```python
+                        bullet.texture = AssetManager.get_texture('bullet', fallback_color=arcade.color.YELLOW, width=8, height=8)
+                        # DESCRIPTION: a small yellow circular bullet
+                    ```
 
 【CODE STRUCTURE TEMPLATE (MANDATORY)】:
 You MUST use this exact structure. Do NOT change the View classes, only fill in the `MyGame` logic.
@@ -80,16 +89,6 @@ SCREEN_TITLE = "Generated Game"
 # --- UI Colors ---
 UI_BG_COLOR = arcade.color.DARK_BLUE_GRAY
 UI_TEXT_COLOR = arcade.color.WHITE
-
-# --- Helper Functions (Asset Generation) ---
-def create_texture(name, size, color, shape="rect"):
-    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    if shape == "rect":
-        draw.rectangle((0, 0, size, size), fill=color)
-    elif shape == "circle":
-        draw.ellipse((0, 0, size, size), fill=color)
-    return arcade.Texture(f"{{name}}_{{random.randint(0, 10000)}}", img)
 
 # --- Views ---
 
@@ -160,12 +159,12 @@ class MyGame(arcade.View):
 
         # TODO: Initialize Player and Sprites here
         # Example:
-        # tex = create_texture("player", 32, (0, 255, 0))
-        # self.player = arcade.Sprite()
-        # self.player.texture = tex
-        # self.player.center_x = SCREEN_WIDTH // 2
-        # self.player.center_y = SCREEN_HEIGHT // 2
-        # self.player_list.append(self.player)
+        self.player = arcade.Sprite()
+        self.player.texture = AssetManager.get_texture('player', fallback_color=arcade.color.RED, width=32, height=32)
+        # DESCRIPTION: a green military apple with a cannon facing forward
+        self.player.center_x = SCREEN_WIDTH // 2
+        self.player.center_y = SCREEN_HEIGHT // 2
+        self.player_list.append(self.player)
 
     def on_draw(self):
         arcade.start_render()
@@ -267,10 +266,7 @@ CRITICAL INSTRUCTIONS FOR TOOL USAGE:
 4. **Coordinate Systems**: 
    - Arcade's (0,0) is BOTTOM-LEFT.
    - For grids: `x = start_x + col * cell_size`. Ensure centers are calculated correctly.
-5. **Texture Management**:
-   - In 2.x, when creating textures from PIL, you MUST provide a unique name string as the first argument:
-     `arcade.Texture(f"unique_id_{{id(self)}}", pil_image)`.
-6. **Grid & Adjacency Safety (MANDATORY)**:
+5. **Grid & Adjacency Safety (MANDATORY)**:
    - When checking neighboring cells (e.g., `grid[i+1][j]`), you MUST NOT assume the cell exists.
    - ALWAYS use the pattern: `if grid[i][j] is not None and grid[i+1][j] is not None:` before comparing values.
    - This is especially critical for logic like `check_loss_condition` or `merge_tiles`.
