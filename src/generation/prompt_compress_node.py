@@ -20,25 +20,34 @@ class LocalPromptCompressor:
         if isinstance(error_history, list):
             error_history = "\n---\n".join(error_history)
 
-        prompt = ChatPromptTemplate.from_messages([
-            SystemMessage(content="""
-               You are a python error summarization assistant.\n\n
-               Your task is to take verbose Python error messages and summarize them into concise, actionable insights that retain all critical information for debugging.\n\n
-               Make sure that you do NOT lose any important technical details, constraints, or instructions in the summarization process.\n\n
-               """),
-            ("user",
-             "Summarize the following Python error message into a concise format suitable for debugging:\n\n{errors}")
-        ])
+        chain = None
+        try:
+            prompt = ChatPromptTemplate.from_messages([
+                SystemMessage(content="""
+                   You are a python error summarization assistant.\n\n
+                   Your task is to take verbose Python error messages and summarize them into concise, actionable insights that retain all critical information for debugging.\n\n
+                   Make sure that you do NOT lose any important technical details, constraints, or instructions in the summarization process.\n\n
+                   """),
+                ("user",
+                 "Summarize the following Python error message into a concise format suitable for debugging:\n\n{errors}")
+            ])
+            chain = prompt | self.local_llm | StrOutputParser()
+        except ConnectionError:
+            print("The Ollama server for prompt compression hasn't started. Make sure that the server is running.")
 
-        chain = prompt | self.local_llm | StrOutputParser()
-
-        return chain.invoke({"errors": error_history})
+        if chain is not None:
+            return chain.invoke({"errors": error_history})
+        return error_history
 
     def get_gdd_mechanics_extractor(self):
-        prompt = ChatPromptTemplate.from_messages([
-            SystemMessage(
-                content="You are a technical extractor. Extract ONLY the core gameplay mechanics, controls, and win/loss conditions from the GDD.\n\n"
-                        "Discard all story, visual, and audio descriptions. Be extremely concise."),
-            ("user", "GDD:\n{gdd}")
-        ])
+        prompt = ""
+        try:
+            prompt = ChatPromptTemplate.from_messages([
+                SystemMessage(
+                    content="You are a technical extractor. Extract ONLY the core gameplay mechanics, controls, and win/loss conditions from the GDD.\n\n"
+                            "Discard all story, visual, and audio descriptions. Be extremely concise."),
+                ("user", "GDD:\n{gdd}")
+            ])
+        except ConnectionError:
+            print("The Ollama server for prompt compression hasn't started. Make sure that the server is running.")
         return prompt | self.local_llm | StrOutputParser()

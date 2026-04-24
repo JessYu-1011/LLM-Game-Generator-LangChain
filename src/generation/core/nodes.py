@@ -65,6 +65,9 @@ def plan_reviewer_node(state: GameState, agents, log_callback):
     }
 
 def programmer_node(state: GameState, agents, prompt_compress_agents, log_callback, work_dir):
+    """
+    =================== Math related prompts injection ===========================
+    """
     math_injection = ""
     gdd_lower = state["gdd"].lower()
     if any(k in gdd_lower for k in ["pool", "billiard", "physics", "ball", "shooter", "tank"]):
@@ -77,6 +80,9 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
         log_callback("[System] Detected Platformer. Injecting Gravity Logic...")
         math_injection = PLATFORMER_CHEAT_SHEET
 
+    """
+    ========================= Choose which templates to use ==============================
+    """
     log_callback("[Programmer] AI deciding on required templates...")
     needed_templates = []
     try:
@@ -95,7 +101,9 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
         needed_templates = ["asset_manager.py", "camera.py", "menu.py"]
 
     log_callback(f"[Programmer] Selected templates: {needed_templates}")
-
+    """
+    ========================= Inject the prompts for the needed templates ======================== 
+    """
     template_code_blocks = []
     guaranteed_imports = []
     template_instructions = ""
@@ -147,6 +155,9 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
             "=======================================================\n"
         )
 
+    """
+    ==================== Constraints for generating the codes ============================= 
+    """
     log_callback("[Programmer] Implementing game.py with RAG, Math & Templates...")
     complexity_constraints = (
         "1. Write verbose code with detailed comments.\n"
@@ -158,11 +169,15 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
     constraints = "\n".join(state["architecture_plan"].get('constraints', []))
     full_constraints = f"{constraints}\n\n{complexity_constraints}"
 
+    """
+    ================== Generating codes ==========================
+    """
     response = agents.get_programmer_chain().invoke({
         "architecture_plan": state["architecture_plan"],
         "review_feedback": state["plan_feedback"],
         "constraints": full_constraints,
-        "math_context": math_injection
+        "math_context": math_injection,
+        "templates": template_injection_prompt,
     })
 
     content = response.content if hasattr(response, 'content') else str(response)
@@ -283,8 +298,9 @@ def fixer_node(state: GameState, agents, prompt_compress_agents, log_callback, w
     history_errors = state["test_errors"][:-1]
     error_prompt = latest_error
     if history_errors:
-        compressed_history = prompt_compress_agents.compress_errors(history_errors)
-        error_prompt = f"[Past Failed Attempts (Do NOT repeat these mistakes)]:\n{compressed_history}\n\n[Latest Error]:\n{latest_error}"
+        #compressed_history = prompt_compress_agents.compress_errors(history_errors)
+        #error_prompt = f"[Past Failed Attempts (Do NOT repeat these mistakes)]:\n{compressed_history}\n\n[Latest Error]:\n{latest_error}"
+        error_prompt = f"[Past Failed Attempts (Do NOT repeat these mistakes)]:\n{history_errors}\n\n[Latest Error]:\n{latest_error}"
 
     if "[LogicError]" in latest_error:
         response = agents.get_logic_fixer_chain().invoke({
@@ -320,7 +336,7 @@ def check_plan_loop(state: GameState):
     return "continue_to_programmer" if state["plan_iterations"] >= 2 else "back_to_architect"
 
 def check_test_loop(state: GameState):
-    if state["is_valid"]:
+    if state["das_valid"]:
         return "success"
     if state["test_iterations"] >= 5:
         return "failure"
