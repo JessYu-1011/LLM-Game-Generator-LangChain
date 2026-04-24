@@ -1,9 +1,6 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
-from langchain_core.callbacks import BaseCallbackHandler
-from pydantic import BaseModel, Field
-from typing import List, Optional
 
 from src.generation.model_factory import get_langchain_model
 from src.generation.arcade_tools import ARCADE_LANGCHAIN_TOOLS
@@ -15,74 +12,8 @@ from src.prompts.code_generation_prompts import (
 )
 from src.prompts.design_prompts import CEO_PROMPT, CPO_PROMPT, CPO_REVIEW_PROMPT
 from src.prompts.testing_prompts import FIXER_PROMPT, LOGIC_REVIEW_PROMPT, LOGIC_FIXER_PROMPT
-
-
-class TokenTrackerCallback(BaseCallbackHandler):
-    def __init__(self):
-        self.prompt_tokens = 0
-        self.completion_tokens = 0
-        self.one_time_token_usage = 0
-
-    @property
-    def total_tokens(self):
-        return self.prompt_tokens + self.completion_tokens
-
-    @property
-    def one_time_max_token_usage(self):
-        return self.one_time_token_usage
-
-    def on_llm_end(self, response, **kwargs):
-        counted = False
-        prompt_tokens = 0
-        completion_tokens = 0
-        if response.generations:
-            for gen_list in response.generations:
-                for gen in gen_list:
-                    if hasattr(gen, "message") and hasattr(gen.message,
-                                                           "usage_metadata") and gen.message.usage_metadata:
-                        usage = gen.message.usage_metadata
-                        prompt_tokens = usage.get("input_tokens", 0)
-                        completion_tokens = usage.get("output_tokens", 0)
-                        if self.one_time_token_usage < (prompt_tokens + completion_tokens):
-                            self.one_time_token_usage = prompt_tokens + completion_tokens
-
-                        counted = True
-
-        if not counted and response.llm_output and "token_usage" in response.llm_output:
-            usage = response.llm_output["token_usage"]
-            prompt_tokens = usage.get("prompt_tokens", 0)
-            completion_tokens = usage.get("completion_tokens", 0)
-            if self.one_time_token_usage < (prompt_tokens + completion_tokens):
-                self.one_time_token_usage = prompt_tokens + completion_tokens
-
-        self.prompt_tokens += prompt_tokens
-        self.completion_tokens += completion_tokens
-
-
-class TechnicalPlan(BaseModel):
-    architecture: str = Field(description="Overview of the system architecture")
-    constraints: List[str] = Field(description="Critical technical constraints (e.g., 'Check NoneType')")
-
-class FixingCodes(BaseModel):
-    status: str = Field(description="Whether the logic review is pass")
-    start_line: Optional[int] = Field(
-        default=None,
-        description="Start line of the code that needs to be fixed in the original file."
-    )
-    end_line: Optional[int] = Field(
-        default=None,
-        description="End line of the code that needs to be fixed in the original file."
-    )
-    codes_to_replace: Optional[str] = Field(
-        default=None,
-        description=(
-            "The fully corrected Python code snippet to replace the lines from start_line to end_line. "
-            "CRITICAL: The output MUST be strictly enclosed in markdown code blocks like ```python= ... ```. "
-            "It MUST adhere completely to Arcade 2.6.x standard (e.g., use 'arcade.draw_rectangle_filled' and 'arcade.start_render()', "
-            "NEVER use Arcade 3.0 APIs like 'draw_rect_filled')."
-        )
-    )
-
+from generation.utils.token_tracker import TokenTrackerCallback
+from generation.utils.schemas import TechnicalPlan, FixingCodes
 
 class ArcadeAgentChain:
     def __init__(self, provider="openai", model=None, temperature=0.7):
