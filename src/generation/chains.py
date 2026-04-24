@@ -152,6 +152,7 @@ class ArcadeAgentChain:
             ("user",
              "Analyze this Game Design Document (GDD) and decide which Python template modules are needed for the game.\n"
              "Available templates:\n"
+             "**Important**: You must use `asset_manager.py` under any circumstances."
              "- \"menu.py\": Provides `PauseView` and `SettingsView` (Arcade GUI) for pause menu and volume control.\n"
              "- \"camera.py\": Provides `FollowCamera` for 2D scrolling if the game world/map is larger than the screen.\n"
              "- \"asset_manager.py\": Provides `AssetManager` for safely loading images and sounds. ALWAYS recommend this if game has graphics.\n\n"
@@ -197,8 +198,10 @@ class ArcadeAgentChain:
              f"RULES & HELPERS:\n{legacy_conventions}\n\n"
              "Math & Physics Formulas (MANDATORY):\n{math_context}\n\n"
              "TASK: Implement the FULL game logic in 'game.py'.\n"
+             "Templates: \n {templates}"
              "Output ONLY the code block.")
         ])
+
         return prompt | self.llm | StrOutputParser()
 
     # --- Phase 3: Testing & Fixing ---
