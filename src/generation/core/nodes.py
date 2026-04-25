@@ -357,7 +357,7 @@ def check_plan_loop(state: GameState):
     return "continue_to_programmer" if state["plan_iterations"] >= 2 else "back_to_architect"
 
 def check_test_loop(state: GameState):
-    if state["das_valid"]:
+    if state["is_valid"]:
         return "success"
     if state["test_iterations"] >= 5:
         return "failure"
