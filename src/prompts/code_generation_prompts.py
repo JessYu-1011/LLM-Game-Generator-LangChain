@@ -4,6 +4,10 @@ Task: Analyze the GDD and define visuals using simple GEOMETRY.
 Constraint: Do NOT use image files. Use distinct RGB Colors and Shapes.
 Output: Valid JSON only.
 
+CRITICAL RULE FOR size ARRAY:
+The size MUST contain ONLY absolute integer values (e.g., [800, 400], [32, 32]).
+NEVER use string variables, constants, or expressions like "SCREEN_WIDTH" or "TABLE_HEIGHT". If you need a size, estimate it in absolute pixels.
+
 Example Output:
 {{
   "background_color": [0, 0, 0],

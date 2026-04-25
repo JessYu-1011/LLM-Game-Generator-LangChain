@@ -7,31 +7,65 @@ import textwrap
 
 def get_dynamic_fuzz_logic(game_file_path: str) -> str:
     """
-    尋找動態 Fuzz 邏輯。Arcade 2.x 版本應呼叫 window 的方法。
+    尋找動態 Fuzz 邏輯。
+    已升級：全域適用，不依賴特定 View 的 on_update。
     """
     dir_path = os.path.dirname(game_file_path)
     logic_path = os.path.join(dir_path, "fuzz_logic.py")
 
     default_logic = """
-# Random Mouse Press (Arcade 2.x Style)
+# --- 1. 初始化與跳過開始畫面 (Click to Start) ---
+if not hasattr(window, '_monkey_has_started'):
+    window._monkey_has_started = True
+
+    _w = window.width
+    _h = window.height
+
+    # 模擬滑鼠點擊畫面正中央
+    if hasattr(self, 'on_mouse_press'):
+        try: self.on_mouse_press(_w // 2, _h // 2, arcade.MOUSE_BUTTON_LEFT, 0)
+        except: pass
+    if hasattr(self, 'on_mouse_release'):
+        try: self.on_mouse_release(_w // 2, _h // 2, arcade.MOUSE_BUTTON_LEFT, 0)
+        except: pass
+
+    # 模擬按下 ENTER 與 SPACE
+    if hasattr(self, 'on_key_press'):
+        try: 
+            self.on_key_press(arcade.key.ENTER, 0)
+            self.on_key_press(arcade.key.SPACE, 0)
+        except: pass
+
+# --- 2. 隨機壓力測試 (Random Fuzzing) ---
+_w = window.width
+_h = window.height
+
+# Random Mouse Press
 if _monkey_random.random() < 0.05:
-    _mx = _monkey_random.randint(0, self.width)
-    _my = _monkey_random.randint(0, self.height)
-    self.on_mouse_press(_mx, _my, arcade.MOUSE_BUTTON_LEFT, 0)
-    self.on_mouse_release(_mx, _my, arcade.MOUSE_BUTTON_LEFT, 0)
+    _mx = _monkey_random.randint(0, _w)
+    _my = _monkey_random.randint(0, _h)
+    if hasattr(self, 'on_mouse_press'):
+        try: self.on_mouse_press(_mx, _my, arcade.MOUSE_BUTTON_LEFT, 0)
+        except: pass
+    if hasattr(self, 'on_mouse_release'):
+        try: self.on_mouse_release(_mx, _my, arcade.MOUSE_BUTTON_LEFT, 0)
+        except: pass
 
 # Random Key Press
 if _monkey_random.random() < 0.05:
-    _keys = [arcade.key.SPACE, arcade.key.LEFT, arcade.key.RIGHT, arcade.key.UP, arcade.key.DOWN]
+    _keys = [arcade.key.SPACE, arcade.key.LEFT, arcade.key.RIGHT, arcade.key.UP, arcade.key.DOWN, arcade.key.ENTER, arcade.key.ESCAPE]
     _k = _monkey_random.choice(_keys)
-    self.on_key_press(_k, 0)
-    """
+    if hasattr(self, 'on_key_press'):
+        try: self.on_key_press(_k, 0)
+        except: pass
+"""
 
     if os.path.exists(logic_path):
         try:
             with open(logic_path, "r", encoding="utf-8") as f:
-                content = f.read()
-                return content
+                custom_logic = f.read()
+                bypass_start_logic = default_logic.split("# --- 2.")[0]
+                return bypass_start_logic + "\n" + custom_logic
         except Exception:
             return default_logic
 
@@ -40,8 +74,8 @@ if _monkey_random.random() < 0.05:
 
 def inject_monkey_bot(code_content: str, bot_logic: str) -> str:
     """
-    將 Monkey Bot 注入 Arcade 2.x 的 on_update 方法中。
-    修復：若無 on_update，則自動建立一個。
+    將 Monkey Bot 包裝成獨立的全域函數，並使用 arcade.schedule 注入到 arcade.run() 之前。
+    這樣無論目前的 View 是什麼，Fuzzer 都會完美運行！
     """
     # 預處理
     lines = bot_logic.splitlines()
@@ -50,45 +84,32 @@ def inject_monkey_bot(code_content: str, bot_logic: str) -> str:
     bot_logic = "\n".join(filtered_lines)
     bot_logic = textwrap.dedent(bot_logic).strip()
 
-    bot_logic = bot_logic.replace("window.", "self.")
-    bot_logic = bot_logic.replace("random.", "_monkey_random.")
+    # 建立全域的 hook 函數
+    hook_code = f"""
+def _global_monkey_bot(delta_time):
+    try:
+        import arcade
+        import random as _monkey_random
+        # 動態取得當前的 window 與 view
+        window = arcade.get_window()
+        self = window.current_view
 
-    monkey_bot_template = """
-    def on_update(self, delta_time):
-        # --- [INJECTED MONKEY BOT START] ---
-        try:
-            import random as _monkey_random
-{indented_logic}
-        except Exception as _e:
-            pass 
-        # --- [INJECTED MONKEY BOT END] ---
-"""
+{textwrap.indent(bot_logic, '        ')}
+    except Exception:
+        pass
 
-    # 1. 嘗試尋找現有的注入點
-    patterns = [
-        r"def\s+on_update\s*\(\s*self\s*,\s*delta_time[^)]*\)\s*:",
-        r"def\s+update\s*\(\s*self\s*,\s*delta_time[^)]*\)\s*:",
-        r"def\s+update\s*\(\s*self\s*\)\s*:"
-    ]
+arcade.schedule(_global_monkey_bot, 1/60.0)
+arcade.run()"""
 
-    for pattern in patterns:
-        match = re.search(pattern, code_content)
+    # 尋找 arcade.run() 並將其替換為我們的全域 hook
+    if "arcade.run()" in code_content:
+        pattern = re.compile(r"([ \t]*)arcade\.run\(\)")
+        match = pattern.search(code_content)
         if match:
-            # 如果找到了，就插入邏輯（去掉 template 的 def 行）
-            insertion_point = match.end()
-            pure_logic = textwrap.indent(bot_logic, "            ")
-            # 這裡我們不使用完整 template，只取邏輯部分
-            inject_payload = f"\n        # --- [INJECTED] ---\n        try:\n            import random as _monkey_random\n{pure_logic}\n        except: pass\n"
-            return code_content[:insertion_point] + inject_payload + code_content[insertion_point:]
-
-    # 2. 如果沒找到 on_update，則在類別定義後強行插入一個新的 on_update
-    class_pattern = r"class\s+\w+\s*\(\s*arcade\.Window\s*\)\s*:"
-    class_match = re.search(class_pattern, code_content)
-    if class_match:
-        insertion_point = class_match.end()
-        indented_logic = textwrap.indent(bot_logic, "            ")
-        new_method = monkey_bot_template.replace("{indented_logic}", indented_logic)
-        return code_content[:insertion_point] + "\n" + new_method + code_content[insertion_point:]
+            indent = match.group(1)  # 取得原本 arcade.run() 的縮排
+            # 確保我們注入的程式碼縮排完全一致
+            formatted_hook = textwrap.indent(hook_code.strip(), indent)
+            return code_content[:match.start()] + formatted_hook + code_content[match.end():]
 
     return code_content
 
@@ -147,5 +168,5 @@ def run_fuzz_test(file_path: str, duration: int = 15) -> tuple[bool, str]:
 
 if __name__ == "__main__":
     file_path = "/mnt/d/NCKU/CSIE-Project/LLM-Game-Generator-LangChain/output_games/generated_game/game.py"
-    success, msg = run_fuzz_test(file_path, 10)
+    success, msg = run_fuzz_test(file_path, 100)
     print(success, msg)

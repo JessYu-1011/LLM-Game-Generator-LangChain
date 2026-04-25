@@ -27,7 +27,7 @@ def get_env_ssl_verify(key: str, default):
 
 
 class Config:
-    # 專案路徑
+    # --- Project Paths ---
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     PROJECT_ROOT = os.path.dirname(BASE_DIR)
     OUTPUT_DIR = os.path.join(PROJECT_ROOT, "output_games")
@@ -52,7 +52,7 @@ class Config:
     DEEPSEEK_MODEL_NAME = os.getenv("DEEPSEEK_MODEL_NAME", "deepseek-chat")
     INCEPTION_MODEL_NAME = os.getenv("INCEPTION_MODEL_NAME", "inception")
 
-    # --- OLLAMA ---
+    # --- Ollama ---
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
     OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
     OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "llama3:8b")
@@ -70,6 +70,9 @@ class Config:
     # --- Prompt Compression ---
     PROMPT_COMPRESS_PROVIDER = os.getenv("PROMPT_COMPRESS_PROVIDER")
     PROMPT_COMPRESS_MODEL_NAME = os.getenv("PROMPT_COMPRESS_MODEL_NAME")
+
+    # --- ComfyUI ---
+    COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "http://127.0.0.1:8188")
 
     # --- ChromaDB ---
     CHROMA_TENANT = os.getenv("CHROMA_TENANT", "default_tenant")

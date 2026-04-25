@@ -34,7 +34,7 @@ def design_reviewer_node(state: GameState, agents, log_callback):
 
 def asset_node(state: GameState, log_callback, provider_name):
     log_callback("[System] Generating Assets...")
-    assets = generate_assets(gdd_context=state["gdd"], provider=provider_name)
+    assets = generate_assets(gdd_context=state["gdd"], provider=provider_name, log_callback=log_callback)
     return {"assets_json": assets}
 
 def architect_node(state: GameState, agents, log_callback):
@@ -97,7 +97,7 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
         if not needed_templates:
             needed_templates = ["asset_manager.py", "camera.py", "menu.py"]
     except Exception as e:
-        log_callback(f"[Warning] Template decision failed, using defaults. Error: {e}")
+        log_callback(f"[Programmer] [Warning] Template decision failed, using defaults. Error: {e}")
         needed_templates = ["asset_manager.py", "camera.py", "menu.py"]
 
     log_callback(f"[Programmer] Selected templates: {needed_templates}")
@@ -135,7 +135,7 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
                 guaranteed_imports.append("from menu import PauseView")
                 template_instructions += "- **Pause System (MANDATORY)**: DO NOT write `self.paused = True`. Instead, handle ESC key like this:\n  `if key == arcade.key.ESCAPE: self.window.show_view(PauseView(self))`\n"
         else:
-            log_callback(f"[Warning] Template file not found: {t_path}")
+            log_callback(f"[Programmer] [Warning] Template file not found: {t_path}")
 
     imports_str = "\n".join(guaranteed_imports)
     template_injection_prompt = ""
@@ -191,28 +191,49 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
             safe_env[name] = eval(expr, {"__builtins__": None}, safe_env)
         except:
             pass
+
     pattern = r"get_texture\(\s*'([^']+)'.*?width\s*=\s*([^,\s)]+).*?height\s*=\s*([^\s,)]+)\s*\)[\s\S]*?#\s*DESCRIPTION:\s*([^\n]+)"
     matches = re.findall(pattern, cleaned_code, re.DOTALL)
+
     for match in matches:
         if len(match) != 4: continue
-        name, width, height, description = match
+        name, width_str, height_str, description = match
+
+        # 安全解析 Width
         try:
-            width = eval(width, {"__builtins__": None}, safe_env)
+            # 先嘗試用 safe_env 算出來
+            final_width = int(eval(width_str, {"__builtins__": None}, safe_env))
         except:
-            width = int(width)
-            
-        size = [int(width), int(height)]
+            try:
+                # 算不出來，嘗試直接轉整數
+                final_width = int(width_str)
+            except:
+                # 轉整數也失敗，給予預設值 64
+                log_callback(f"[Warning] Cannot parse width '{width_str}' for '{name}'. Using fallback 64.")
+                final_width = 64
+
+        # 安全解析 Height (同樣的邏輯保護)
+        try:
+            final_height = int(eval(height_str, {"__builtins__": None}, safe_env))
+        except:
+            try:
+                final_height = int(height_str)
+            except:
+                log_callback(f"[Warning] Cannot parse height '{height_str}' for '{name}'. Using fallback 64.")
+                final_height = 64
+
+        size = [final_width, final_height]
         picture_generate(name, description, size)
 
     for imp in guaranteed_imports:
         if imp not in cleaned_code:
-            log_callback(f"[Failsafe] LLM forgot to import '{imp}'. Auto-injecting...")
+            log_callback(f"[Programmer] [Failsafe] LLM forgot to import '{imp}'. Auto-injecting...")
             if "import arcade" in cleaned_code:
                 cleaned_code = cleaned_code.replace("import arcade", f"import arcade\n{imp}")
             else:
                 cleaned_code = f"import arcade\n{imp}\n" + cleaned_code
 
-    log_callback("[Test] Generating Fuzzer logic snippet...")
+    log_callback("[Programmer] [Test] Generating Fuzzer logic snippet...")
     fuzzer_response = agents.get_fuzzer_chain().invoke({"gdd": state["gdd"]})
     fuzzer_logic = fuzzer_response.content if hasattr(fuzzer_response, 'content') else str(fuzzer_response)
     cleaned_fuzzer_logic = clean_code_content(fuzzer_logic)
@@ -336,7 +357,7 @@ def check_plan_loop(state: GameState):
     return "continue_to_programmer" if state["plan_iterations"] >= 2 else "back_to_architect"
 
 def check_test_loop(state: GameState):
-    if state["das_valid"]:
+    if state["is_valid"]:
         return "success"
     if state["test_iterations"] >= 5:
         return "failure"
