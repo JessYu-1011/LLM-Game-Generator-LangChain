@@ -3,12 +3,10 @@ import chromadb.errors
 import hashlib
 import requests
 import urllib3
-import re
 from chromadb.api.types import Documents, Embeddings, EmbeddingFunction
 from chromadb.config import Settings
 from chromadb.utils import embedding_functions
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
 
 from src.config import Config, config
 

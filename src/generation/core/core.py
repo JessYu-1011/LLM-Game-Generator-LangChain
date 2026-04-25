@@ -1,7 +1,7 @@
 import os
 from src.config import config
-from generation.core.chains import ArcadeAgentChain
-from generation.utils.prompt_compress_node import LocalPromptCompressor
+from src.generation.core.chains import ArcadeAgentChain
+from src.generation.utils.prompt_compress_node import LocalPromptCompressor
 from src.generation.core.graph_builder import create_game_generator_graph
 
 
