@@ -5,12 +5,12 @@ from src.generation.utils.prompt_compress_node import LocalPromptCompressor
 from src.generation.core.graph_builder import create_game_generator_graph
 
 
-def run_full_generator_pipeline(user_input, log_callback=print, provider="openai"):
+def run_full_generator_pipeline(user_input, log_callback=print, default_config: dict = None, chain_configs: dict = None):
     """
     Executes the full LangGraph pipeline automatically.
     """
     # Agents
-    agents = ArcadeAgentChain(provider, model=None)
+    agents = ArcadeAgentChain(default_config, chain_configs)
     prompt_compress_agents = LocalPromptCompressor(
         provider=config.PROMPT_COMPRESS_PROVIDER,
         model_name=config.PROMPT_COMPRESS_MODEL_NAME,
@@ -28,7 +28,7 @@ def run_full_generator_pipeline(user_input, log_callback=print, provider="openai
         prompt_compress_agents=prompt_compress_agents,
         log_callback=log_callback,
         work_dir=output_path,
-        provider_name=provider
+        provider_name=default_config["provider"]
     )
 
     # Initial state

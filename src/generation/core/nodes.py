@@ -6,6 +6,7 @@ import traceback
 from src.generation.asset_gen import generate_assets
 from src.generation.core.game_state import GameState
 from src.utils import clean_code_content, save_generated_files
+from src.config import config
 from src.generation.core.programmer_node_utils import (
     _programmer_node_constraints,
     _programmer_node_choose_templates,
@@ -93,9 +94,9 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
     content = response.content if hasattr(response, 'content') else str(response)
     cleaned_code = clean_code_content(content)
 
-    safe_env = _programmer_node_extract_safe_constants(cleaned_code)
-
-    _programmer_node_generate_images_from_code(cleaned_code, safe_env, log_callback)
+    if config.USING_PICTURE_GENERATE:
+        safe_env = _programmer_node_extract_safe_constants(cleaned_code)
+        _programmer_node_generate_images_from_code(cleaned_code, safe_env, log_callback)
 
     cleaned_code = _programmer_node_apply_import_failsafe(cleaned_code, guaranteed_imports, log_callback)
 

@@ -171,7 +171,7 @@ def _programmer_node_generate_images_from_code(code: str, safe_env: dict, log_ca
                 final_height = 64
 
         size = [final_width, final_height]
-        picture_generate(name, description, size)
+        picture_generate(name, description, size, log_callback)
 
 def _programmer_node_apply_import_failsafe(code: str, imports: list, log_callback) -> str:
     """

@@ -5,120 +5,458 @@
     <title>Arcade Game Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', monospace; background: #1e1e1e; color: #e0e0e0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        h1 { color: #4caf50; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
+        body {
+            font-family: 'Segoe UI', monospace;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-        .container { width: 100%; max-width: 800px; background: #2d2d2d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h1 {
+            color: #4caf50;
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+            text-align: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
 
         /* Input Group */
-        .input-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #aaa; }
+        .input-group {
+            margin-bottom: 20px;
+        }
 
-        input[type="text"], select {
-            width: 100%; padding: 12px; font-size: 16px;
-            background: #3d3d3d; border: 1px solid #555; color: #fff; border-radius: 5px;
-            box-sizing: border-box; /* Fix padding issue */
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #aaa;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            font-size: 15px;
+            background: #3d3d3d;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .flex-col {
+            flex: 1;
         }
 
         button {
-            width: 100%; padding: 12px; font-size: 18px; cursor: pointer;
-            background: #4caf50; border: none; color: white; font-weight: bold; border-radius: 5px;
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            background: #4caf50;
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 5px;
             transition: background 0.3s;
+            margin-top: 10px;
         }
-        button:hover { background: #45a049; }
-        button:disabled { background: #555; cursor: not-allowed; }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-generate {
+            background: #4caf50;
+            flex: 2;
+        }
+
+        .btn-generate:hover {
+            background: #45a049;
+        }
+
+        .btn-save {
+            background: #2196F3;
+            flex: 1;
+        }
+
+        .btn-save:hover {
+            background: #1e88e5;
+        }
+
+        .btn-load {
+            background: #FF9800;
+            flex: 1;
+        }
+
+        .btn-load:hover {
+            background: #fb8c00;
+        }
+
+        /* Advanced Settings Collapsible */
+        details {
+            background: #333;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+
+        summary {
+            font-weight: bold;
+            cursor: pointer;
+            color: #4caf50;
+            padding: 5px 0;
+            outline: none;
+        }
+
+        .phase-section {
+            margin-top: 15px;
+            padding-left: 10px;
+            border-left: 2px solid #555;
+        }
+
+        .phase-title {
+            color: #88c0d0;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .chain-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+            background: #2a2a2a;
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .chain-label {
+            width: 220px;
+            font-size: 14px;
+            color: #e5e9f0;
+        }
 
         /* Logs */
         #logs {
-            border: 1px solid #444; padding: 15px; height: 400px;
-            overflow-y: scroll; background: #000; font-size: 14px;
-            border-radius: 5px; margin-top: 20px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            border: 1px solid #444;
+            padding: 15px;
+            height: 400px;
+            overflow-y: scroll;
+            background: #000;
+            font-size: 14px;
+            border-radius: 5px;
+            margin-top: 20px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
         }
-        .log-entry { margin: 5px 0; border-bottom: 1px solid #333; padding-bottom: 2px; }
-        .log-timestamp { color: #888; margin-right: 10px; font-size: 12px; }
+
+        .log-entry {
+            margin: 5px 0;
+            border-bottom: 1px solid #333;
+            padding-bottom: 2px;
+        }
+
+        .log-timestamp {
+            color: #888;
+            margin-right: 10px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Arcade 2.x Game Generator</h1>
+<div class="container">
+    <h1>Arcade 2.x Game Generator</h1>
 
-        <div class="input-group">
-            <label for="providerSelect">Select AI Provider:</label>
-            <select id="providerSelect">
-                {% for provider in providers %}
-                <option value="{{ provider }}">{{ provider|capitalize }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="input-group">
-            <label for="ideaInput">Game Idea:</label>
-            <input type="text" id="ideaInput" placeholder="e.g., A cyberpunk snake game with neon effects...">
-        </div>
-
-        <button id="genBtn" onclick="startGeneration()">Generate Game</button>
-
-        <div id="logs"></div>
+    <div class="input-group">
+        <label for="ideaInput">Game Idea:</label>
+        <input type="text" id="ideaInput" placeholder="e.g., A cyberpunk snake game with neon effects...">
     </div>
 
-    <script>
-        // Use standard polling/websocket transport to avoid compatibility issues
-        var socket = io({transports: ['polling', 'websocket']});
-        var logsDiv = document.getElementById('logs');
-        var btn = document.getElementById('genBtn');
+    <fieldset style="border: 1px solid #555; border-radius: 5px; margin-bottom: 20px; padding: 15px;">
+        <legend style="color: #aaa; font-weight: bold; padding: 0 5px;">Default Settings</legend>
+        <div class="flex-row">
+            <div class="flex-col">
+                <label>Provider</label>
+                <select id="defaultProvider">
+                    {% for provider in providers %}
+                    <option value="{{ provider }}" {% if provider=='mistral' %}selected{% endif %}>{{ provider|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-col">
+                <label>Model</label>
+                <input type="text" id="defaultModel" value="codestral-latest">
+            </div>
+            <div class="flex-col">
+                <label>Temperature</label>
+                <input type="number" id="defaultTemp" value="0.7" step="0.1" min="0" max="2">
+            </div>
+        </div>
 
-        socket.on('connect', function() {
-            console.log('Connected to Server');
-            addLog('System', 'Connected to server ready.');
+        <!-- 加入 Picture Generate 的控制選項 -->
+        <div class="flex-row" style="align-items: center; margin-bottom: 0;">
+            <input type="checkbox" id="usePictureGenerate"
+                   style="width: auto; transform: scale(1.3); margin-right: 10px; cursor: pointer;">
+            <label for="usePictureGenerate" style="margin-bottom: 0; cursor: pointer; color: #88c0d0;">Enable Picture
+                Generation</label>
+        </div>
+    </fieldset>
+
+    <details>
+        <summary>⚙️ Advanced: Per-Chain Configuration (Override defaults)</summary>
+        <div id="chainsContainer">
+            <!-- Dynamically generated via JS -->
+        </div>
+    </details>
+
+    <div class="action-buttons">
+        <button id="genBtn" class="btn-generate" onclick="startGeneration()">Generate Game</button>
+        <button id="saveBtn" class="btn-save" onclick="saveSettings()">Save Config</button>
+        <button id="loadBtn" class="btn-load" onclick="loadSettings()">Load Config</button>
+    </div>
+
+    <div id="logs"></div>
+</div>
+
+<script>
+    // 改為直接從選單提取選項，避免 Jinja2 tojson 在某些環境下發生語法錯誤
+    const availableProviders = Array.from(document.querySelectorAll('#defaultProvider option')).map(opt => opt.value);
+
+    const chainStructure = {
+        "🧠 Phase 1: Design": ["get_ceo_chain", "get_cpo_chain", "get_reviewer_chain"],
+        "🏗️ Phase 2: Production": ["get_architect_chain", "get_architect_refinement_chain", "get_template_decision_chain", "get_plan_reviewer_chain", "get_programmer_chain"],
+        "🧪 Phase 3: Testing & Fixing": ["get_syntax_fixer_chain", "get_logic_reviewer_chain", "get_logic_fixer_chain", "get_fuzzer_chain"]
+    };
+
+    // Render chain inputs
+    const chainsContainer = document.getElementById('chainsContainer');
+    Object.keys(chainStructure).forEach(phase => {
+        let section = document.createElement('div');
+        section.className = 'phase-section';
+
+        let title = document.createElement('div');
+        title.className = 'phase-title';
+        title.innerText = phase;
+        section.appendChild(title);
+
+        chainStructure[phase].forEach(chainName => {
+            let row = document.createElement('div');
+            row.className = 'chain-row';
+
+            let providerOptions = `<option value="">-- Inherit Default --</option>`;
+            availableProviders.forEach(p => {
+                providerOptions += `<option value="${p}">${p.charAt(0).toUpperCase() + p.slice(1)}</option>`;
+            });
+
+            row.innerHTML = `
+                    <div class="chain-label">${chainName}</div>
+                    <select class="chain-provider" data-chain="${chainName}">
+                        ${providerOptions}
+                    </select>
+                    <input type="text" class="chain-model" data-chain="${chainName}" placeholder="Model (Inherit)">
+                    <input type="number" class="chain-temp" data-chain="${chainName}" placeholder="Temp" step="0.1" min="0" max="2" style="width: 80px;">
+                `;
+            section.appendChild(row);
+        });
+        chainsContainer.appendChild(section);
+    });
+
+    // Socket.IO Setup
+    var socket = io({transports: ['polling', 'websocket']});
+    var logsDiv = document.getElementById('logs');
+    var btn = document.getElementById('genBtn');
+
+    socket.on('connect', function () {
+        console.log('Connected to Server');
+        addLog('System', 'Connected to server ready.');
+    });
+
+    socket.on('agent_log', function (msg) {
+        addLog('Agent', msg.data);
+    });
+
+    function addLog(source, message) {
+        var div = document.createElement('div');
+        div.className = 'log-entry';
+        var time = new Date().toLocaleTimeString();
+        div.innerHTML = `<span class="log-timestamp">[${time}]</span> <span style="color: #4caf50;">[${source}]</span> ${message}`;
+        logsDiv.appendChild(div);
+        logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
+
+    // Helper to extract all settings from UI
+    function collectSettings() {
+        var defaultConfig = {
+            provider: document.getElementById('defaultProvider').value || 'mistral',
+            model: document.getElementById('defaultModel').value || 'codestral-latest',
+            temperature: parseFloat(document.getElementById('defaultTemp').value) || 0.7,
+            using_picture_generate: document.getElementById('usePictureGenerate').checked
+        };
+
+        var chainConfigs = {};
+        document.querySelectorAll('.chain-row').forEach(row => {
+            let p = row.querySelector('.chain-provider');
+            let chainName = p.getAttribute('data-chain');
+
+            let providerVal = p.value;
+            let modelVal = row.querySelector('.chain-model').value.trim();
+            let tempVal = row.querySelector('.chain-temp').value;
+
+            if (providerVal || modelVal || tempVal) {
+                chainConfigs[chainName] = {};
+                if (providerVal) chainConfigs[chainName].provider = providerVal;
+                if (modelVal) chainConfigs[chainName].model = modelVal;
+                if (tempVal !== "") chainConfigs[chainName].temperature = parseFloat(tempVal);
+            }
         });
 
-        socket.on('agent_log', function(msg) {
-            addLog('Agent', msg.data);
-        });
+        return {default_config: defaultConfig, chain_configs: chainConfigs};
+    }
 
-        function addLog(source, message) {
-            var div = document.createElement('div');
-            div.className = 'log-entry';
-            var time = new Date().toLocaleTimeString();
-            div.innerHTML = `<span class="log-timestamp">[${time}]</span> <span style="color: #4caf50;">[${source}]</span> ${message}`;
-            logsDiv.appendChild(div);
-            logsDiv.scrollTop = logsDiv.scrollHeight;
+    // --- New Save/Load Settings Logic ---
+    function saveSettings() {
+        let configData = collectSettings();
+        addLog('System', 'Saving configuration to server...');
+
+        fetch('/save_settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(configData)
+        })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        addLog('System', 'Configuration saved successfully!');
+                    } else {
+                        addLog('Error', 'Failed to save configuration: ' + data.message);
+                    }
+                })
+                .catch(err => addLog('Error', 'Save request failed: ' + err));
+    }
+
+    function loadSettings() {
+        addLog('System', 'Loading configuration from server...');
+        fetch('/load_settings')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.config) {
+                        applyConfigToUI(data.config);
+                        addLog('System', 'Configuration loaded!');
+                    } else {
+                        addLog('Error', 'Failed to load configuration or no cache found.');
+                    }
+                })
+                .catch(err => addLog('Error', 'Load request failed: ' + err));
+    }
+
+    function applyConfigToUI(config) {
+        // Apply Default Config
+        if (config.default_config) {
+            if (config.default_config.provider) document.getElementById('defaultProvider').value = config.default_config.provider;
+            if (config.default_config.model) document.getElementById('defaultModel').value = config.default_config.model;
+            if (config.default_config.temperature !== undefined) document.getElementById('defaultTemp').value = config.default_config.temperature;
+            if (config.default_config.using_picture_generate !== undefined) {
+                document.getElementById('usePictureGenerate').checked = config.default_config.using_picture_generate;
+            }
         }
 
-        function startGeneration() {
-            var idea = document.getElementById('ideaInput').value;
-            var provider = document.getElementById('providerSelect').value; // [NEW] Get selected provider
+        // Apply Chain Configs
+        if (config.chain_configs) {
+            document.querySelectorAll('.chain-row').forEach(row => {
+                let chainName = row.querySelector('.chain-provider').getAttribute('data-chain');
+                let cfg = config.chain_configs[chainName];
 
-            if(!idea) { alert("Please enter a game idea!"); return; }
-
-            // Reset UI
-            logsDiv.innerHTML = '';
-            btn.disabled = true;
-            btn.innerText = "Generating...";
-
-            addLog('System', `Requesting generation with provider: ${provider}...`);
-
-            fetch('/generate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    idea: idea,
-                    provider: provider  // [NEW] Send provider to backend
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                addLog('System', `Finished! Path: ${data.path}`);
-                btn.disabled = false;
-                btn.innerText = "Generate Game";
-            })
-            .catch(err => {
-                addLog('Error', 'Request failed: ' + err);
-                btn.disabled = false;
-                btn.innerText = "Generate Game";
+                if (cfg) {
+                    if (cfg.provider) row.querySelector('.chain-provider').value = cfg.provider;
+                    if (cfg.model) row.querySelector('.chain-model').value = cfg.model;
+                    if (cfg.temperature !== undefined) row.querySelector('.chain-temp').value = cfg.temperature;
+                } else {
+                    // Clear out if not present in loaded config
+                    row.querySelector('.chain-provider').value = "";
+                    row.querySelector('.chain-model').value = "";
+                    row.querySelector('.chain-temp').value = "";
+                }
             });
         }
-    </script>
+    }
+
+    // ------------------------------------
+
+    function startGeneration() {
+        var idea = document.getElementById('ideaInput').value;
+        if (!idea) {
+            alert("Please enter a game idea!");
+            return;
+        }
+
+        var configData = collectSettings();
+
+        // Reset UI
+        logsDiv.innerHTML = '';
+        btn.disabled = true;
+        btn.innerText = "Generating...";
+
+        addLog('System', `Requesting generation... Default: [${configData.default_config.provider}] ${configData.default_config.model}`);
+        addLog('System', `Picture Generation Enabled: ${configData.default_config.using_picture_generate}`);
+
+        fetch('/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                idea: idea,
+                default_config: configData.default_config,
+                chain_configs: configData.chain_configs
+            })
+        })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        addLog('System', `Finished! Path: ${data.path}`);
+                    } else {
+                        addLog('Error', `Failed: ${data.message}`);
+                    }
+                    btn.disabled = false;
+                    btn.innerText = "Generate Game";
+                })
+                .catch(err => {
+                    addLog('Error', 'Request failed: ' + err);
+                    btn.disabled = false;
+                    btn.innerText = "Generate Game";
+                });
+    }
+
+    // 網頁載入完成後，自動觸發載入設定檔的動作
+    window.addEventListener('DOMContentLoaded', (event) => {
+        loadSettings();
+    });
+</script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 
 **/flask_session/
 
+cache/
 
 # log
 **/*log

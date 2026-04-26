@@ -26,6 +26,8 @@ def get_langchain_model(provider: str = "openai", model_name: str = None, temper
         model_name = model_name or config.INCEPTION_MODEL_NAME or "mecury"
     elif provider == "ollama":
         model_name = model_name or config.OLLAMA_MODEL_NAME or "llama3:8b"
+    elif provider == "claude":
+        model_name = model_name or config.CLAUDE_MODEL_NAME or "claude"
 
     # --- 1. OpenAI (Native) ---
     if provider == "openai":
@@ -90,6 +92,14 @@ def get_langchain_model(provider: str = "openai", model_name: str = None, temper
             model=model_name,
             api_key=config.INCEPTION_API_KEY,
             base_url="https://api.inceptionlabs.ai/v1",
+            temperature=temperature,
+        )
+
+    elif provider == "claude":
+        return ChatOpenAI(
+            model=model_name,
+            api_key=config.CLAUDE_API_KEY,
+            base_url="https://api.anthropic.com/v1",
             temperature=temperature,
         )
 

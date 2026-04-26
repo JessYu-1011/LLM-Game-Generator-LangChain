@@ -11,12 +11,12 @@ from src.config import config
 
 BASE_URL = config.COMFYUI_BASE_URL
 
-def picture_generate(name, description, size):
-    print("Name : ", name, " | ", "Description : ", description, " | ", "Size : ", size)
+def picture_generate(name, description, size, log_callback = print):
+    log_callback("[PicGen] Name : ", name, " | ", "Description : ", description, " | ", "Size : ", size)
 
     if size[0] < 32 and size[1] < 32: # 圖片極小 (w < 32 AND h < 32)
-        print(f"{name} is too small ({size}), using fall back.")
-        return 
+        log_callback(f"[PicGen] {name} is too small ({size}), using fall back.")
+        return
     
     # ---------- 等比例放大到 >= 512 ----------
     original_size = size.copy() # 記住原尺寸
@@ -25,7 +25,7 @@ def picture_generate(name, description, size):
     size = [int(w * scale), int(h * scale)]
 
     if size[0] > 2048 or size[1] > 2048:  # 圖片特殊 (長寬比超過4倍)
-        print(f"{name} is too large ({size}), using fall back.")
+        log_callback(f"[PicGen] {name} is too large ({size}), using fall back.")
         return
 
     # ---------- 送到 ComfyUI Queue ----------
@@ -59,7 +59,7 @@ def picture_generate(name, description, size):
             filename = node["images"][0]["filename"]
             break
     else:
-        raise ValueError("No image found in history outputs")
+        raise ValueError("[PicGen] No image found in history outputs")
 
     # ---------- 存檔位置 ----------
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -80,7 +80,7 @@ def picture_generate(name, description, size):
     img = img.resize((original_size[0], original_size[1]), Image.Resampling.NEAREST)
 
     img.save(pic_path, "PNG")
-    print("Picture saved to:", pic_path, "Size:", img.size)
+    log_callback("[PicGen] Picture saved to:", pic_path, "Size:", img.size)
 
     # ---------- 生成 Hitbox ----------
     hitbox_coordinates = generate_hitbox(img, sampling=1)
@@ -92,4 +92,4 @@ def picture_generate(name, description, size):
     with open(hitbox_path, "w") as f:
         json.dump(hitbox_coordinates, f)
 
-    print("Hitbox saved to:", hitbox_path)
+    log_callback("[PicGen] Hitbox saved to:", hitbox_path)
