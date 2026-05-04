@@ -4,6 +4,7 @@ import sys
 import traceback
 
 from src.generation.asset_gen import generate_assets
+from src.generation.core.chains import ArcadeAgentChain
 from src.generation.core.game_state import GameState
 from src.utils import clean_code_content, save_generated_files
 from src.config import config
@@ -15,61 +16,75 @@ from src.generation.core.programmer_node_utils import (
     _programmer_node_generate_images_from_code, _programmer_node_apply_import_failsafe
 )
 
-def ceo_node(state: GameState, agents, log_callback):
+def ceo_node(state: GameState, agents: ArcadeAgentChain, log_callback):
     log_callback(f"[Design] CEO Analyzing idea: {state['user_input']}...")
-    analysis = agents.get_ceo_chain().invoke({"input": state["user_input"]})
+    token_tracker = agents.get_token_tracker()
+    with token_tracker.track_step("ceo"):
+        analysis = agents.get_ceo_chain().invoke({"input": state["user_input"]})
     return {"ceo_analysis": analysis, "design_iterations": 0, "design_feedback": "None"}
 
-def cpo_node(state: GameState, agents, log_callback):
+def cpo_node(state: GameState, agents: ArcadeAgentChain, log_callback):
     log_callback(f"[Design] CPO Drafting GDD (Round {state['design_iterations'] + 1})...")
-    gdd = agents.get_cpo_chain().invoke({
-        "idea": state["user_input"],
-        "analysis": state["ceo_analysis"],
-        "feedback": state["design_feedback"]
-    })
+    token_tracker = agents.get_token_tracker()
+    with token_tracker.track_step("cpo"):
+        gdd = agents.get_cpo_chain().invoke({
+            "idea": state["user_input"],
+            "analysis": state["ceo_analysis"],
+            "feedback": state["design_feedback"]
+        })
     return {"gdd": gdd}
 
-def design_reviewer_node(state: GameState, agents, log_callback):
+def design_reviewer_node(state: GameState, agents: ArcadeAgentChain, log_callback):
     log_callback("[Design] Reviewer critiquing GDD...")
-    feedback = agents.get_reviewer_chain().invoke({"gdd": state["gdd"]})
+    token_tracker = agents.get_token_tracker()
+    with token_tracker.track_step("design"):
+        feedback = agents.get_reviewer_chain().invoke({"gdd": state["gdd"]})
     return {
         "design_feedback": feedback,
         "design_iterations": state["design_iterations"] + 1
     }
 
-def asset_node(state: GameState, log_callback, provider_name):
+def asset_node(state: GameState, agents: ArcadeAgentChain, log_callback):
     log_callback("[System] Generating Assets...")
-    assets = generate_assets(gdd_context=state["gdd"], provider=provider_name, log_callback=log_callback)
+    token_tracker = agents.get_token_tracker()
+    with token_tracker.track_step("asset"):
+        response = agents.get_asset_chain().invoke({"gdd": state["gdd"]})
+    assets = generate_assets(response, log_callback)
     return {"assets_json": assets}
 
-def architect_node(state: GameState, agents, log_callback):
+def architect_node(state: GameState, agents: ArcadeAgentChain, log_callback):
     log_callback(f"[Architect] Planning system architecture (Round {state['plan_iterations'] + 1})...")
+    token_tracker = agents.get_token_tracker()
     if state['plan_iterations'] == 0:
-        plan = agents.get_architect_chain().invoke({
-            "gdd": state["gdd"],
-            "assets": state["assets_json"],
-            "format_instructions": agents.json_parser.get_format_instructions()
-        })
+        with token_tracker.track_step("architect"):
+            plan = agents.get_architect_chain().invoke({
+                "gdd": state["gdd"],
+                "assets": state["assets_json"],
+                "format_instructions": agents.json_parser.get_format_instructions()
+            })
     else:
         log_callback("[Architect] Refining plan based on feedback...")
         plan_str = json.dumps(state["architecture_plan"], indent=2)
-        plan = agents.get_architect_refinement_chain().invoke({
-            "original_plan": plan_str,
-            "feedback": state["plan_feedback"],
-            "format_instructions": agents.json_parser.get_format_instructions()
-        })
+        with token_tracker.track_step("architect_refinement"):
+            plan = agents.get_architect_refinement_chain().invoke({
+                "original_plan": plan_str,
+                "feedback": state["plan_feedback"],
+                "format_instructions": agents.json_parser.get_format_instructions()
+            })
     return {"architecture_plan": plan}
 
-def plan_reviewer_node(state: GameState, agents, log_callback):
+def plan_reviewer_node(state: GameState, agents: ArcadeAgentChain, log_callback):
     log_callback("[Architect] Plan Review...")
     plan_str = json.dumps(state["architecture_plan"], indent=2)
-    feedback = agents.get_plan_reviewer_chain().invoke({"plan": plan_str})
+    token_tracker = agents.get_token_tracker()
+    with token_tracker.track_step("architect_plan_review"):
+        feedback = agents.get_plan_reviewer_chain().invoke({"plan": plan_str})
     return {
         "plan_feedback": feedback,
         "plan_iterations": state["plan_iterations"] + 1
     }
 
-def programmer_node(state: GameState, agents, prompt_compress_agents, log_callback, work_dir):
+def programmer_node(state: GameState, agents: ArcadeAgentChain, prompt_compress_agents, log_callback, work_dir):
     math_injection = _programmer_node_math_injection(state, log_callback)
 
     needed_templates = _programmer_node_choose_templates(state, agents, prompt_compress_agents, log_callback)
@@ -83,13 +98,16 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
     """
     ================== Generating codes ==========================
     """
-    response = agents.get_programmer_chain().invoke({
-        "architecture_plan": state["architecture_plan"],
-        "review_feedback": state["plan_feedback"],
-        "constraints": full_constraints,
-        "math_context": math_injection,
-        "templates": template_injection_prompt,
-    })
+    
+    token_tracker = agents.get_token_tracker()
+    with token_tracker.track_step("programmer"):
+        response = agents.get_programmer_chain().invoke({
+            "architecture_plan": state["architecture_plan"],
+            "review_feedback": state["plan_feedback"],
+            "constraints": full_constraints,
+            "math_context": math_injection,
+            "templates": template_injection_prompt,
+        })
 
     content = response.content if hasattr(response, 'content') else str(response)
     cleaned_code = clean_code_content(content)
@@ -119,7 +137,7 @@ def programmer_node(state: GameState, agents, prompt_compress_agents, log_callba
         "is_valid": False
     }
 
-def evaluator_node(state: GameState, agents, log_callback, work_dir):
+def evaluator_node(state: GameState, agents: ArcadeAgentChain, log_callback, work_dir):
     log_callback(f"\n[Test] Starting validation round {state['test_iterations'] + 1}...")
     current_code = state["current_code"]
     main_file_path = os.path.join(work_dir, "game.py")
@@ -155,7 +173,9 @@ def evaluator_node(state: GameState, agents, log_callback, work_dir):
         return {"test_errors": state.get("test_errors", []) + [error_msg]}
 
     log_callback("[Review] Running strict API standard review...")
-    review_result = agents.get_logic_reviewer_chain().invoke({"code": current_code})
+    token_tracker = agents.get_token_tracker()
+    with token_tracker.track_step("evaluator"):
+        review_result = agents.get_logic_reviewer_chain().invoke({"code": current_code})
 
     if isinstance(review_result, dict):
         status_str = str(review_result.get("status", "")).upper()
@@ -179,28 +199,36 @@ def evaluator_node(state: GameState, agents, log_callback, work_dir):
     log_callback("[Result] Code passed ALL validations successfully!")
     return {"is_valid": True}
 
-def fixer_node(state: GameState, agents, prompt_compress_agents, log_callback, work_dir):
+def fixer_node(state: GameState, agents: ArcadeAgentChain, prompt_compress_agents, log_callback, work_dir):
     log_callback("[Fixer] Reading historical error logs and attempting fix...")
     latest_error = state["test_errors"][-1]
 
     history_errors = state["test_errors"][:-1]
     error_prompt = latest_error
     if history_errors:
-        compressed_history = prompt_compress_agents.compress_errors(history_errors)
-        error_prompt = f"[Past Failed Attempts (Do NOT repeat these mistakes)]:\n{compressed_history}\n\n[Latest Error]:\n{latest_error}"
-        # error_prompt = f"[Past Failed Attempts (Do NOT repeat these mistakes)]:\n{history_errors}\n\n[Latest Error]:\n{latest_error}"
+        chain = prompt_compress_agents.get_compress_errors_chain()
+        if chain is not None:
+            token_tracker = agents.get_token_tracker()
+            with token_tracker.track_step("compress_errors"):
+                compressed_history = chain.invoke({"errors": history_errors})
+            error_prompt = f"[Past Failed Attempts (Do NOT repeat these mistakes)]:\n{compressed_history}\n\n[Latest Error]:\n{latest_error}"
+            # error_prompt = f"[Past Failed Attempts (Do NOT repeat these mistakes)]:\n{history_errors}\n\n[Latest Error]:\n{latest_error}"
+
+    token_tracker = agents.get_token_tracker()
 
     if "[LogicError]" in latest_error:
-        response = agents.get_logic_fixer_chain().invoke({
-            "code": state["current_code"],
-            "error": error_prompt,
-            "gdd": state["gdd"]
-        })
+        with token_tracker.track_step("logic_fixer"):
+            response = agents.get_logic_fixer_chain().invoke({
+                "code": state["current_code"],
+                "error": error_prompt,
+                "gdd": state["gdd"]
+            })
     else:
-        response = agents.get_syntax_fixer_chain().invoke({
-            "code": state["current_code"],
-            "error": error_prompt
-        })
+        with token_tracker.track_step("syntax_fixer"):
+            response = agents.get_syntax_fixer_chain().invoke({
+                "code": state["current_code"],
+                "error": error_prompt
+            })
 
     updated_code = clean_code_content(response)
 

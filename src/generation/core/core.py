@@ -13,9 +13,11 @@ def run_full_generator_pipeline(user_input, log_callback=print, default_config: 
     # Agents
     agents = ArcadeAgentChain(default_config, chain_configs)
     prompt_compress_agents = LocalPromptCompressor(
+        agents.get_token_tracker(),
         provider=config.PROMPT_COMPRESS_PROVIDER,
         model_name=config.PROMPT_COMPRESS_MODEL_NAME,
-        temperature=0.1
+        temperature=0.1,
+        log_callback=log_callback
     )
 
 
@@ -56,13 +58,14 @@ def run_full_generator_pipeline(user_input, log_callback=print, default_config: 
 
     # Token calculation
     token_tracker = agents.get_token_tracker()
-    log_callback("=" * 50)
-    log_callback("[Token Usage Report] Token Cost of Generation and Debug")
-    log_callback(f"Prompt Tokens (Input): {token_tracker.prompt_tokens}")
-    log_callback(f"Completion Tokens (Output): {token_tracker.completion_tokens}")
-    log_callback(f"One Time Max Token Usage: {token_tracker.one_time_token_usage}")
-    log_callback(f"Total Tokens (All): {token_tracker.total_tokens}")
-    log_callback("=" * 50)
+    token_tracker.print_summary(log_callback=log_callback)
+    # log_callback("=" * 50)
+    # log_callback("[Token Usage Report] Token Cost of Generation and Debug")
+    # log_callback(f"Prompt Tokens (Input): {token_tracker.prompt_tokens}")
+    # log_callback(f"Completion Tokens (Output): {token_tracker.completion_tokens}")
+    # log_callback(f"One Time Max Token Usage: {token_tracker.one_time_token_usage}")
+    # log_callback(f"Total Tokens (All): {token_tracker.total_tokens}")
+    # log_callback("=" * 50)
 
     # Return the final project files dictionary
     return final_state.get("project_files", {})

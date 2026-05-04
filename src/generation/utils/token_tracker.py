@@ -96,25 +96,25 @@ class TokenTrackerCallback(BaseCallbackHandler):
         if stats["max_single"] < current_total:
             stats["max_single"] = current_total
 
-    def print_summary(self):
+    def print_summary(self, log_callback = print):
         """印出詳細的 Token 使用報告"""
-        print("\n" + "=" * 50)
-        print("[Token Usage Report] Breakdown by Agent")
-        print("=" * 50)
+        log_callback("\n" + "=" * 50)
+        log_callback("[Token Usage Report] Breakdown by Agent")
+        log_callback("=" * 50)
 
         # 依序印出每個 Agent 的花費
         for step, stats in self.step_usage.items():
             if stats["total"] > 0:  # 只印出有實際消耗的 Agent
-                print(f"[{step.upper()}]")
-                print(f"  Prompt (Input) : {stats['prompt']:>7}")
-                print(f"  Completion     : {stats['completion']:>7}")
-                print(f"  Total Tokens   : {stats['total']:>7}")
-                print(f"  Max Single     : {stats['max_single']:>7}")
-                print("-" * 50)
+                log_callback(f"[{step.upper()}]")
+                log_callback(f"  Prompt (Input) : {stats['prompt']:>7}")
+                log_callback(f"  Completion     : {stats['completion']:>7}")
+                log_callback(f"  Total Tokens   : {stats['total']:>7}")
+                log_callback(f"  Max Single     : {stats['max_single']:>7}")
+                log_callback("-" * 50)
 
-        print("[OVERALL SYSTEM]")
-        print(f"  Total Prompt   : {self.prompt_tokens:>7}")
-        print(f"  Total Output   : {self.completion_tokens:>7}")
-        print(f"  GRAND TOTAL    : {self.total_tokens:>7}")
-        print(f"  Sys Max Single : {self.one_time_max_token_usage:>7}")
-        print("=" * 50 + "\n")
+        log_callback("[OVERALL SYSTEM]")
+        log_callback(f"  Total Prompt   : {self.prompt_tokens:>7}")
+        log_callback(f"  Total Output   : {self.completion_tokens:>7}")
+        log_callback(f"  GRAND TOTAL    : {self.total_tokens:>7}")
+        log_callback(f"  Sys Max Single : {self.one_time_max_token_usage:>7}")
+        log_callback("=" * 50 + "\n")

@@ -10,7 +10,7 @@ from src.prompts.code_generation_prompts import (
     ARCHITECT_SYSTEM_PROMPT,
     PROGRAMMER_PROMPT_TEMPLATE,
     PLAN_REVIEW_PROMPT,
-    FUZZER_GENERATION_PROMPT
+    FUZZER_GENERATION_PROMPT, ART_PROMPT
 )
 from src.prompts.design_prompts import CEO_PROMPT, CPO_PROMPT, CPO_REVIEW_PROMPT
 from src.prompts.testing_prompts import FIXER_PROMPT, LOGIC_REVIEW_PROMPT, LOGIC_FIXER_PROMPT
@@ -91,6 +91,15 @@ class ArcadeAgentChain:
              )
         ])
         return prompt | llm | StrOutputParser()
+
+    @with_llm_injection(temperature=0.5)
+    def get_asset_chain(self, llm):
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(content=ART_PROMPT),
+            ("user", "GDD Content:\n{gdd}")
+        ])
+        return prompt | llm | StrOutputParser()
+
 
     # --- Phase 2: Production (Architect & Programmer) ---
     @with_llm_injection()

@@ -1,17 +1,10 @@
 import json
 import re
-
-from langchain_core.messages import SystemMessage
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from src.generation.model_factory import get_langchain_model
 from src.generation.picture_generate import picture_generate
-from src.prompts.code_generation_prompts import ART_PROMPT
 
 
 def generate_assets(
-        gdd_context: str,
-        provider: str = "openai",
+        response: str,
         log_callback = print,
 ) -> str:
     """
@@ -43,18 +36,9 @@ def generate_assets(
     }
     """
     # Use the unified factory to get the correct model for the provider
-    llm = get_langchain_model(provider=provider, temperature=0.5)
 
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessage(content=ART_PROMPT),
-        ("user", "GDD Content:\n{gdd}")
-    ])
-
-    chain = prompt | llm | StrOutputParser()
 
     try:
-        response = chain.invoke({"gdd": gdd_context})
-
         log_callback("[AssetGen]")
         log_callback("=== RAW OUTPUT ===")
         # print(response)

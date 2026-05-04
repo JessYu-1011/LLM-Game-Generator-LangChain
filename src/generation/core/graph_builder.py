@@ -19,7 +19,7 @@ def create_game_generator_graph(agents, prompt_compress_agents, log_callback, wo
     workflow.add_node("CEO", partial(ceo_node, agents=agents, log_callback=log_callback))
     workflow.add_node("CPO", partial(cpo_node, agents=agents, log_callback=log_callback))
     workflow.add_node("Design_Reviewer", partial(design_reviewer_node, agents=agents, log_callback=log_callback))
-    workflow.add_node("Asset_Gen", partial(asset_node, log_callback=log_callback, provider_name=provider_name))
+    workflow.add_node("Asset_Gen", partial(asset_node, agents=agents, log_callback=log_callback))
     workflow.add_node("Architect", partial(architect_node, agents=agents, log_callback=log_callback))
     workflow.add_node("Plan_Reviewer", partial(plan_reviewer_node, agents=agents, log_callback=log_callback))
 

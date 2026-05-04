@@ -2,6 +2,7 @@ import json
 import os
 import re
 
+from src.generation.core.chains import ArcadeAgentChain
 from src.generation.core.game_state import GameState
 from src.generation.picture_generate import picture_generate
 from src.prompts.game_logic_cheat_sheet import PHYSICS_MATH_CHEAT_SHEET, GRID_MATH_CHEAT_SHEET, PLATFORMER_CHEAT_SHEET
@@ -25,7 +26,7 @@ def _programmer_node_math_injection(state: GameState, log_callback) -> str:
     return math_injection
 
 
-def _programmer_node_choose_templates(state: GameState, agents, prompt_compress_agents, log_callback) -> list:
+def _programmer_node_choose_templates(state: GameState, agents: ArcadeAgentChain, prompt_compress_agents, log_callback) -> list:
     """
     ========================= Choose which templates to use ==============================
     """
@@ -33,7 +34,9 @@ def _programmer_node_choose_templates(state: GameState, agents, prompt_compress_
     needed_templates = []
     try:
         log_callback("[Programmer] Extracting core mechanics for template decision...")
-        compressed_gdd = prompt_compress_agents.get_gdd_mechanics_extractor().invoke({"gdd": state["gdd"]})
+        token_tracker = agents.get_token_tracker()
+        with token_tracker.track_step("compress_gdd"):
+            compressed_gdd = prompt_compress_agents.get_gdd_mechanics_extractor().invoke({"gdd": state["gdd"]})
         resp = agents.get_template_decision_chain().invoke({"gdd": compressed_gdd})
 
         match = re.search(r'\[.*?\]', resp, re.DOTALL)
